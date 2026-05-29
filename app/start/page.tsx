@@ -1,8 +1,42 @@
+import { redirect } from "next/navigation"
 import OnboardingForm from "@/components/forms/OnboardingForm"
 import Link from "next/link"
 import { Salad, ArrowLeft } from "lucide-react"
+import { createSupabaseServerClient } from "@/lib/supabase-server"
+import { createServerClient } from "@/lib/supabase"
 
-export default function StartPage() {
+export default async function StartPage() {
+  // If user is logged in and already has a plan, redirect them there
+  try {
+    const supabaseAuth = await createSupabaseServerClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+
+    if (user) {
+      const supabase = createServerClient()
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single()
+
+      if (profile) {
+        const { data: plan } = await supabase
+          .from("meal_plans")
+          .select("id")
+          .eq("profile_id", profile.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
+
+        if (plan) {
+          redirect(`/plan/${plan.id}`)
+        }
+      }
+    }
+  } catch {
+    // Not logged in or no plan — continue to onboarding
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-12 px-4">
       <div className="max-w-xl mx-auto">

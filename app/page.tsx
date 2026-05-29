@@ -1,7 +1,27 @@
 import Link from "next/link"
 import { Salad, CheckCircle, ChevronRight, Star, Zap, ShieldCheck, BarChart2, FileDown, ShoppingBasket } from "lucide-react"
+import { createSupabaseServerClient } from "@/lib/supabase-server"
+import { createServerClient } from "@/lib/supabase"
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Check if user is logged in and has a plan
+  let myPlanId: string | null = null
+  try {
+    const supabaseAuth = await createSupabaseServerClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (user) {
+      const supabase = createServerClient()
+      const { data: profile } = await supabase
+        .from("profiles").select("id").eq("user_id", user.id).single()
+      if (profile) {
+        const { data: plan } = await supabase
+          .from("meal_plans").select("id").eq("profile_id", profile.id)
+          .order("created_at", { ascending: false }).limit(1).single()
+        if (plan) myPlanId = plan.id
+      }
+    }
+  } catch { /* not logged in */ }
+
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
       {/* Nav */}
@@ -12,15 +32,26 @@ export default function LandingPage() {
             NutriPlan
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-              Sign In
-            </Link>
-            <Link
-              href="/start"
-              className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-all shadow-sm"
-            >
-              Get Started Free
-            </Link>
+            {myPlanId ? (
+              <Link
+                href={`/plan/${myPlanId}`}
+                className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-all shadow-sm"
+              >
+                My Plan →
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                  Sign In
+                </Link>
+                <Link
+                  href="/start"
+                  className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-all shadow-sm"
+                >
+                  Get Started Free
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
