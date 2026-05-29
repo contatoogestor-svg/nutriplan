@@ -2,6 +2,8 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Salad, Calendar } from "lucide-react"
 import PlanDashboard from "./PlanDashboard"
+import UserMenu from "@/components/ui/UserMenu"
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 
 async function getPlan(id: string) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
@@ -24,6 +26,13 @@ export default async function PlanPage({
   const data = await getPlan(id)
   if (!data) notFound()
 
+  let userEmail: string | null = null
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    userEmail = user?.email ?? null
+  } catch { /* not authenticated */ }
+
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Nav */}
@@ -41,6 +50,7 @@ export default async function PlanPage({
               <Calendar className="w-4 h-4" />
               Check-in
             </Link>
+            {userEmail && <UserMenu email={userEmail} planId={id} />}
           </div>
         </div>
       </header>

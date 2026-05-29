@@ -2,14 +2,17 @@ import Link from "next/link"
 import { Salad, CheckCircle, ChevronRight, Star, Zap, ShieldCheck, BarChart2, FileDown, ShoppingBasket } from "lucide-react"
 import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { createServerClient } from "@/lib/supabase"
+import UserMenu from "@/components/ui/UserMenu"
 
 export default async function LandingPage() {
   // Check if user is logged in and has a plan
   let myPlanId: string | null = null
+  let userEmail: string | null = null
   try {
     const supabaseAuth = await createSupabaseServerClient()
     const { data: { user } } = await supabaseAuth.auth.getUser()
     if (user) {
+      userEmail = user.email ?? null
       const supabase = createServerClient()
       const { data: profile } = await supabase
         .from("profiles").select("id").eq("user_id", user.id).single()
@@ -32,13 +35,8 @@ export default async function LandingPage() {
             NutriPlan
           </div>
           <div className="flex items-center gap-3">
-            {myPlanId ? (
-              <Link
-                href={`/plan/${myPlanId}`}
-                className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-all shadow-sm"
-              >
-                My Plan →
-              </Link>
+            {userEmail ? (
+              <UserMenu email={userEmail} planId={myPlanId ?? undefined} />
             ) : (
               <>
                 <Link href="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
