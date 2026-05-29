@@ -39,7 +39,7 @@ export default function AuthForm({ mode, redirectTo }: AuthFormProps) {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        router.push(redirectTo || "/")
+        router.push(redirectTo || "/start")
         router.refresh()
       }
     } catch (err: unknown) {
