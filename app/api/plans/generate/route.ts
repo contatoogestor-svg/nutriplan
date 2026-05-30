@@ -23,12 +23,9 @@ export async function POST(req: NextRequest) {
     let user_id: string | undefined
     try {
       const supabaseAuth = await createSupabaseServerClient()
-      const { data: { user }, error: authErr } = await supabaseAuth.auth.getUser()
+      const { data: { user } } = await supabaseAuth.auth.getUser()
       user_id = user?.id
-      console.log("[generate] auth user:", user?.id ?? "none", authErr?.message ?? "")
-    } catch (e) {
-      console.log("[generate] auth error:", e)
-    }
+    } catch { /* guest user — no user_id */ }
 
     // Validate required fields
     if (!name || !date_of_birth || !gender || !height_cm || !weight_kg || !target_weight_kg || !goal_days) {
@@ -74,10 +71,9 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (profileError || !profile) {
-      console.error("[generate] Profile insert error:", profileError)
+      console.error("Profile insert error:", profileError)
       return NextResponse.json({ error: "Failed to save profile." }, { status: 500 })
     }
-    console.log("[generate] Profile saved:", profile.id, "user_id:", user_id ?? "none")
 
     // Save activities
     if (activities && activities.length > 0) {
