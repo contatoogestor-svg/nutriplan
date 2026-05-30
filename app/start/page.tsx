@@ -6,7 +6,10 @@ import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { createServerClient } from "@/lib/supabase"
 
 export default async function StartPage() {
-  // If user is logged in and already has a plan, redirect them there
+  // If user is logged in and already has a plan, redirect them there.
+  // IMPORTANT: redirect() must be called OUTSIDE try-catch — it works by
+  // throwing a NEXT_REDIRECT error which a catch block would swallow.
+  let existingPlanId: string | null = null
   try {
     const supabaseAuth = await createSupabaseServerClient()
     const { data: { user } } = await supabaseAuth.auth.getUser()
@@ -28,14 +31,14 @@ export default async function StartPage() {
           .limit(1)
           .single()
 
-        if (plan) {
-          redirect(`/plan/${plan.id}`)
-        }
+        if (plan) existingPlanId = plan.id
       }
     }
   } catch {
-    // Not logged in or no plan — continue to onboarding
+    // Not logged in or DB error — continue to onboarding
   }
+
+  if (existingPlanId) redirect(`/plan/${existingPlanId}`)
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-12 px-4">

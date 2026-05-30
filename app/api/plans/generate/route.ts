@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
       goal_days,
       unit_preference,
       activities,
+      user_id,
     } = body
 
     // Validate required fields
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Save profile
+    // Save profile (link to auth user if provided)
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .insert({
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
         target_weight_kg: Number(target_weight_kg),
         goal_days: Number(goal_days),
         unit_preference: unit_preference || "metric",
+        ...(user_id ? { user_id } : {}),
       })
       .select("id")
       .single()
