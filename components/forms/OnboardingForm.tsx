@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { gtagEvent } from "@/lib/gtag"
 import UnitToggle from "@/components/ui/UnitToggle"
 import SafetyAlert from "@/components/ui/SafetyAlert"
 import AcronymTooltip from "@/components/ui/AcronymTooltip"
@@ -160,6 +161,7 @@ export default function OnboardingForm() {
         setErrors({ form: data.error || "Something went wrong. Please try again." })
         return
       }
+      gtagEvent("02zRCL6YgrYcENOjnuBD")
       router.push(`/plan/${data.planId}`)
     } catch {
       setErrors({ form: "Network error. Please check your connection and try again." })

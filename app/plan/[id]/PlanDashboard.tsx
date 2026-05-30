@@ -12,6 +12,7 @@ import AcronymTooltip from "@/components/ui/AcronymTooltip"
 import { formatWeight } from "@/lib/unitConversion"
 import type { Profile, MealPlan, Activity } from "@/lib/supabase"
 import { isProUser } from "@/lib/subscription"
+import { gtagEvent } from "@/lib/gtag"
 
 interface PlanDashboardProps {
   data: { plan: MealPlan; profile: Profile; activities: Activity[] }
@@ -66,6 +67,7 @@ export default function PlanDashboard({ data, planId, upgradeSession }: PlanDash
         if (json.status === "active" || json.status === "trialing") {
           clearInterval(interval)
           setUpgradeState("done")
+          gtagEvent("hLlkCLurmbYcENOjnuBD")
           router.refresh()
           return
         }
