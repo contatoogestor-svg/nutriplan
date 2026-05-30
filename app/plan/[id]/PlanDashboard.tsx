@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { UtensilsCrossed, ShoppingCart, TrendingDown, Dumbbell, AlertTriangle, Info, RefreshCw, CheckCircle } from "lucide-react"
+import { UtensilsCrossed, ShoppingCart, TrendingDown, Dumbbell, AlertTriangle, Info, RefreshCw, CheckCircle, Settings } from "lucide-react"
 import MealPlanTab from "@/components/plan/MealPlanTab"
 import ShoppingListTab from "@/components/plan/ShoppingListTab"
 import TimelineTab from "@/components/plan/TimelineTab"
@@ -35,6 +35,16 @@ export default function PlanDashboard({ data, planId, upgradeSession }: PlanDash
 
   const { plan, profile, activities } = data
   const isPro = isProUser(profile.subscription_status)
+
+  async function handleManageSubscription() {
+    const res = await fetch("/api/stripe/portal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId }),
+    })
+    const { url } = await res.json()
+    if (url) window.location.href = url
+  }
 
   // Verify subscription directly from Stripe after checkout redirect
   useEffect(() => {
@@ -97,15 +107,26 @@ export default function PlanDashboard({ data, planId, upgradeSession }: PlanDash
       )}
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {profile.name}'s Meal Plan
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Generated {new Date(plan.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-          {" · "}
-          Goal: {formatWeight(profile.target_weight_kg, unit)} in {profile.goal_days} days
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {profile.name}'s Meal Plan
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Generated {new Date(plan.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            {" · "}
+            Goal: {formatWeight(profile.target_weight_kg, unit)} in {profile.goal_days} days
+          </p>
+        </div>
+        {isPro && (
+          <button
+            onClick={handleManageSubscription}
+            className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex-shrink-0 mt-1"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Manage Plan
+          </button>
+        )}
       </div>
 
       {/* Safety warnings */}
