@@ -25,13 +25,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <p>
               © {new Date().getFullYear()} NutriPlan · Not a substitute for professional medical advice.
             </p>
-            <Link
-              href="/science"
-              className="flex items-center gap-1 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-            >
-              <FlaskConical className="w-3.5 h-3.5" />
-              Scientific Basis
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link href="/privacy" className="hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                Terms of Use
+              </Link>
+              <Link
+                href="/science"
+                className="flex items-center gap-1 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                Scientific Basis
+              </Link>
+            </div>
           </div>
         </footer>
       </body>
