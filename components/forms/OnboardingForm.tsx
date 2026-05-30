@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser"
 import UnitToggle from "@/components/ui/UnitToggle"
 import SafetyAlert from "@/components/ui/SafetyAlert"
 import AcronymTooltip from "@/components/ui/AcronymTooltip"
@@ -57,14 +56,6 @@ export default function OnboardingForm() {
   const [loading, setLoading] = useState(false)
   const [showGlossary, setShowGlossary] = useState(false)
   const [preview, setPreview] = useState<{ deficit: number; minDays: number } | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient()
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null)
-    })
-  }, [])
 
   const set = (field: keyof FormData, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -161,7 +152,6 @@ export default function OnboardingForm() {
           goal_days: parseInt(form.goal_days),
           unit_preference: unit,
           activities: form.has_activity ? form.activities : [],
-          user_id: userId ?? undefined,
         }),
       })
 

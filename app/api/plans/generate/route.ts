@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { calculateNutritionPlan } from "@/lib/nutrition"
 import { generateDailyMeals } from "@/lib/mealDatabase"
 
@@ -16,8 +17,15 @@ export async function POST(req: NextRequest) {
       goal_days,
       unit_preference,
       activities,
-      user_id,
     } = body
+
+    // Get the authenticated user from the session cookie (server-side, no race condition)
+    let user_id: string | undefined
+    try {
+      const supabaseAuth = await createSupabaseServerClient()
+      const { data: { user } } = await supabaseAuth.auth.getUser()
+      user_id = user?.id
+    } catch { /* guest user — no user_id */ }
 
     // Validate required fields
     if (!name || !date_of_birth || !gender || !height_cm || !weight_kg || !target_weight_kg || !goal_days) {
