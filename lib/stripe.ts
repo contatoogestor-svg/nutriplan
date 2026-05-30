@@ -1,8 +1,25 @@
 import Stripe from "stripe"
 
-/** Server-side Stripe client — only use in API routes */
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-05-27.dahlia",
+/** Server-side Stripe client — lazy initialized, only use in API routes */
+let _stripe: Stripe | undefined
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("STRIPE_SECRET_KEY is not configured")
+    }
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2026-05-27.dahlia",
+    })
+  }
+  return _stripe
+}
+
+/** @deprecated Use getStripe() instead */
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return (getStripe() as unknown as Record<string | symbol, unknown>)[prop]
+  },
 })
 
 /** Price IDs from environment */

@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ status: sub.status })
+    const priceAmount = (sub.items.data[0]?.price.unit_amount ?? 0) / 100
+    return NextResponse.json({ status: sub.status, value: priceAmount })
   } catch (err) {
     console.error("[verify-session] exception for session", sessionId, err)
     return NextResponse.json({ error: String(err) }, { status: 500 })

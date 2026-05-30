@@ -67,7 +67,7 @@ export default function PlanDashboard({ data, planId, upgradeSession }: PlanDash
         if (json.status === "active" || json.status === "trialing") {
           clearInterval(interval)
           setUpgradeState("done")
-          gtagEvent("hLlkCLurmbYcENOjnuBD")
+          gtagEvent("hLlkCLurmbYcENOjnuBD", json.value)
           router.refresh()
           return
         }
