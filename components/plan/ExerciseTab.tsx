@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Lock, ChevronDown, ChevronUp, Clock, Flame } from "lucide-react"
+import { Lock, ChevronDown, ChevronUp, Clock, Flame, ExternalLink } from "lucide-react"
 import SafetyAlert from "@/components/ui/SafetyAlert"
 import PaywallOverlay from "@/components/ui/PaywallOverlay"
 
@@ -520,7 +520,18 @@ function WorkoutDetail({ blocks }: { blocks: WorkoutBlock[] }) {
                 className="flex items-start justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2"
               >
                 <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{ex.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{ex.name}</p>
+                    <a
+                      href={`https://www.youtube.com/results?search_query=how+to+${encodeURIComponent(ex.name)}+proper+form`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="See how to do this exercise"
+                      className="text-red-500 hover:text-red-600 transition-colors shrink-0"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
                   {ex.note && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{ex.note}</p>
                   )}
