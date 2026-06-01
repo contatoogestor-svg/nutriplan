@@ -128,7 +128,7 @@ export default function PlanDashboard({ data, planId, upgradeSession, initialLog
             </h2>
             {userPlans.length < 3 && (
               <Link
-                href="/start"
+                href="/start?new=1"
                 className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium hover:text-green-700 dark:hover:text-green-300 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />

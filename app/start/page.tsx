@@ -5,8 +5,16 @@ import { Salad, ArrowLeft } from "lucide-react"
 import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { createServerClient } from "@/lib/supabase"
 
-export default async function StartPage() {
-  // If user is logged in and already has a plan, redirect them there.
+export default async function StartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>
+}) {
+  const sp = await searchParams
+  const isNewPlan = sp.new === "1"
+
+  // If user is logged in and already has a plan, redirect them there —
+  // unless they explicitly requested a new plan (?new=1).
   // IMPORTANT: redirect() must be called OUTSIDE try-catch — it works by
   // throwing a NEXT_REDIRECT error which a catch block would swallow.
   let existingPlanId: string | null = null
@@ -38,7 +46,7 @@ export default async function StartPage() {
     // Not logged in or DB error — continue to onboarding
   }
 
-  if (existingPlanId) redirect(`/plan/${existingPlanId}`)
+  if (existingPlanId && !isNewPlan) redirect(`/plan/${existingPlanId}`)
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-teal-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-12 px-4">
