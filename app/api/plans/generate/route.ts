@@ -47,6 +47,33 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* guest user — no user_id */ }
 
+    // Enforce plan limits: Pro = 3, free/guest = 1
+    if (user_id) {
+      const supabaseService = createServerClient()
+      const { data: existingProfiles } = await supabaseService
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user_id)
+
+      if (existingProfiles && existingProfiles.length > 0) {
+        const { count } = await supabaseService
+          .from("meal_plans")
+          .select("id", { count: "exact", head: true })
+          .in("profile_id", existingProfiles.map((p) => p.id))
+
+        const isPro = !!inherited_subscription_status &&
+          ["active", "trialing"].includes(inherited_subscription_status)
+        const limit = isPro ? 3 : 1
+
+        if ((count ?? 0) >= limit) {
+          return NextResponse.json(
+            { error: isPro ? "Plan limit reached. Pro allows up to 3 plans." : "Upgrade to Pro to create more plans." },
+            { status: 403 }
+          )
+        }
+      }
+    }
+
     // Validate required fields
     if (!name || !email || !date_of_birth || !gender || !height_cm || !weight_kg || !target_weight_kg || !goal_days) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 })
