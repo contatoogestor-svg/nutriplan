@@ -24,15 +24,6 @@ export async function middleware(request: NextRequest) {
   // Refresh session — required to keep auth alive
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect /plan/* routes — redirect to /login if not authenticated
-  const isProtected = request.nextUrl.pathname.startsWith("/plan/")
-  if (isProtected && !user) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = "/login"
-    loginUrl.searchParams.set("redirect", request.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
   return supabaseResponse
 }
 
