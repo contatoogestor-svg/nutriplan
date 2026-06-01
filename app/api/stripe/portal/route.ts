@@ -17,16 +17,31 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("stripe_customer_id")
+    .select("stripe_customer_id, user_id")
     .eq("id", plan.profile_id)
     .single()
 
-  if (!profile?.stripe_customer_id) {
+  let stripeCustomerId = profile?.stripe_customer_id
+
+  // Secondary profiles don't have stripe_customer_id — look it up from
+  // any other profile of the same user that went through Stripe checkout
+  if (!stripeCustomerId && profile?.user_id) {
+    const { data: proProfile } = await supabase
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("user_id", profile.user_id)
+      .not("stripe_customer_id", "is", null)
+      .limit(1)
+      .single()
+    stripeCustomerId = proProfile?.stripe_customer_id
+  }
+
+  if (!stripeCustomerId) {
     return NextResponse.json({ error: "No Stripe customer found." }, { status: 404 })
   }
 
   const portalSession = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
+    customer: stripeCustomerId,
     return_url: `${origin}/plan/${planId}`,
   })
 
