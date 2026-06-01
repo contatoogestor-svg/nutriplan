@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       name,
+      email,
       date_of_birth,
       gender,
       height_cm,
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     } catch { /* guest user — no user_id */ }
 
     // Validate required fields
-    if (!name || !date_of_birth || !gender || !height_cm || !weight_kg || !target_weight_kg || !goal_days) {
+    if (!name || !email || !date_of_birth || !gender || !height_cm || !weight_kg || !target_weight_kg || !goal_days) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 })
     }
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .insert({
         name,
+        email,
         date_of_birth,
         gender,
         height_cm: Number(height_cm),

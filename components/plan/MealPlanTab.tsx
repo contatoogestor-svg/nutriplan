@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, ArrowLeftRight, X } from "lucide-react"
 import { formatFoodWeight } from "@/lib/unitConversion"
-import type { GeneratedMeal } from "@/lib/mealDatabase"
+import { FOOD_DB } from "@/lib/mealDatabase"
+import type { GeneratedMeal, ScaledFoodItem } from "@/lib/mealDatabase"
 import dynamic from "next/dynamic"
 import type { Profile, MealPlan } from "@/lib/supabase"
 import PaywallOverlay from "@/components/ui/PaywallOverlay"
-import { isProUser } from "@/lib/subscription"
 
 const PDFDownloadButton = dynamic(() => import("@/components/pdf/PDFDownloadButton"), { ssr: false })
 
@@ -26,6 +26,11 @@ interface MealPlanTabProps {
   }
 }
 
+interface SwapTarget {
+  mealName: string
+  food: ScaledFoodItem
+}
+
 export default function MealPlanTab({
   meals,
   targetCalories,
@@ -39,7 +44,33 @@ export default function MealPlanTab({
 }: MealPlanTabProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [showPaywall, setShowPaywall] = useState(false)
+  const [showSwapPaywall, setShowSwapPaywall] = useState(false)
+  const [localMeals, setLocalMeals] = useState<GeneratedMeal[]>(meals)
+  const [swapTarget, setSwapTarget] = useState<SwapTarget | null>(null)
   const totalCals = protein_g * 4 + carbs_g * 4 + fat_g * 9
+
+  function handleSwapClick(mealName: string, food: ScaledFoodItem) {
+    if (!isPro) {
+      setShowSwapPaywall(true)
+      return
+    }
+    setSwapTarget({ mealName, food })
+  }
+
+  function applySwap(mealName: string, originalFoodId: string, replacement: ScaledFoodItem) {
+    setLocalMeals((prev) =>
+      prev.map((meal) => {
+        if (meal.mealName !== mealName) return meal
+        const newFoods = meal.foods.map((f) => (f.id === originalFoodId ? replacement : f))
+        const newCals = newFoods.reduce((sum, f) => sum + f.scaledCalories, 0)
+        const newProtein = Math.round(newFoods.reduce((sum, f) => sum + f.scaledProtein_g, 0) * 10) / 10
+        const newCarbs = Math.round(newFoods.reduce((sum, f) => sum + f.scaledCarbs_g, 0) * 10) / 10
+        const newFat = Math.round(newFoods.reduce((sum, f) => sum + f.scaledFat_g, 0) * 10) / 10
+        return { ...meal, foods: newFoods, actualCalories: newCals, protein_g: newProtein, carbs_g: newCarbs, fat_g: newFat }
+      })
+    )
+    setSwapTarget(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -78,27 +109,43 @@ export default function MealPlanTab({
         </div>
       </div>
 
-      {/* PDF Export */}
-      <div className="relative">
-        {isPro ? (
-          <PDFDownloadButton meals={meals} planData={planData} unitPref={unitPref} />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowPaywall(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-          >
-            <span>🔒</span> Export Full Plan PDF — <span className="text-green-600 dark:text-green-400 font-semibold">Pro</span>
-          </button>
-        )}
-        {showPaywall && (
-          <PaywallOverlay feature="PDF Export" planId={planId} onClose={() => setShowPaywall(false)} />
+      {/* Action buttons row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* PDF Export */}
+        <div className="relative">
+          {isPro ? (
+            <PDFDownloadButton meals={localMeals} planData={planData} unitPref={unitPref} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowPaywall(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <span>🔒</span> Export Full Plan PDF — <span className="text-green-600 dark:text-green-400 font-semibold">Pro</span>
+            </button>
+          )}
+          {showPaywall && (
+            <PaywallOverlay feature="PDF Export" planId={planId} onClose={() => setShowPaywall(false)} />
+          )}
+        </div>
+
+        {/* Swap hint */}
+        {isPro && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+            <ArrowLeftRight className="w-3 h-3" />
+            Click a food row to swap it
+          </p>
         )}
       </div>
 
+      {/* Swap paywall overlay */}
+      {showSwapPaywall && (
+        <PaywallOverlay feature="Food Substitution" planId={planId} onClose={() => setShowSwapPaywall(false)} />
+      )}
+
       {/* Meals */}
       <div className="space-y-3">
-        {meals.map((meal) => {
+        {localMeals.map((meal) => {
           const key = meal.mealName
           const open = expanded[key] ?? false
           return (
@@ -141,8 +188,28 @@ export default function MealPlanTab({
                     </thead>
                     <tbody className="divide-y dark:divide-gray-800">
                       {meal.foods.map((food) => (
-                        <tr key={food.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                          <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{food.name}</td>
+                        <tr
+                          key={food.id}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-800/30 group"
+                        >
+                          <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">
+                            <div className="flex items-center gap-2">
+                              <span>{food.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleSwapClick(meal.mealName, food)}
+                                title={isPro ? "Swap this food" : "Pro feature — swap food"}
+                                className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md ${
+                                  isPro
+                                    ? "text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                    : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                }`}
+                              >
+                                <ArrowLeftRight className="w-3 h-3" />
+                                {!isPro && <span className="text-xs">Pro</span>}
+                              </button>
+                            </div>
+                          </td>
                           <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-400 whitespace-nowrap">
                             {formatFoodWeight(food.scaledGrams, unitPref)}
                           </td>
@@ -164,6 +231,108 @@ export default function MealPlanTab({
       <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
         Portions are scaled to your caloric target. Adjust quantities as needed based on hunger and satiety cues.
       </p>
+
+      {/* Swap Modal */}
+      {swapTarget && (
+        <SwapModal
+          target={swapTarget}
+          unitPref={unitPref}
+          onSwap={(replacement) => applySwap(swapTarget.mealName, swapTarget.food.id, replacement)}
+          onClose={() => setSwapTarget(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function SwapModal({
+  target,
+  unitPref,
+  onSwap,
+  onClose,
+}: {
+  target: SwapTarget
+  unitPref: "metric" | "imperial"
+  onSwap: (replacement: ScaledFoodItem) => void
+  onClose: () => void
+}) {
+  const { food } = target
+
+  // Build alternatives: same category, exclude current food, scale to match original calories
+  const alternatives: ScaledFoodItem[] = FOOD_DB
+    .filter((f) => f.category === food.category && f.id !== food.id)
+    .map((f) => {
+      const factor = food.scaledCalories / f.calories
+      return {
+        ...f,
+        scaleFactor: factor,
+        scaledGrams: Math.round(f.gramsPerServing * factor),
+        scaledCalories: food.scaledCalories,
+        scaledProtein_g: Math.round(f.protein_g * factor * 10) / 10,
+        scaledCarbs_g: Math.round(f.carbs_g * factor * 10) / 10,
+        scaledFat_g: Math.round(f.fat_g * factor * 10) / 10,
+      }
+    })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
+      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b dark:border-gray-800">
+          <div>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-200">Swap Food</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Replacing: <span className="font-medium text-gray-700 dark:text-gray-300">{food.name}</span> — {food.scaledCalories} kcal
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Alternatives list */}
+        <div className="overflow-y-auto max-h-80">
+          {alternatives.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-8">No alternatives available in this category.</p>
+          ) : (
+            <ul className="divide-y dark:divide-gray-800">
+              {alternatives.map((alt) => (
+                <li key={alt.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSwap(alt)}
+                    className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors group"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 group-hover:text-green-700 dark:group-hover:text-green-400">
+                        {alt.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {formatFoodWeight(alt.scaledGrams, unitPref)}
+                      </p>
+                    </div>
+                    <div className="text-right text-xs text-gray-500 dark:text-gray-400 shrink-0 ml-4">
+                      <p className="text-gray-700 dark:text-gray-300 font-medium">{alt.scaledCalories} kcal</p>
+                      <p>P: <span className="text-blue-600 dark:text-blue-400">{alt.scaledProtein_g}g</span> C: <span className="text-amber-600 dark:text-amber-400">{alt.scaledCarbs_g}g</span> F: <span className="text-orange-600 dark:text-orange-400">{alt.scaledFat_g}g</span></p>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Footer note */}
+        <div className="px-5 py-3 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Portions are scaled to maintain the same caloric value as the original item.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

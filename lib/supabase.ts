@@ -37,6 +37,7 @@ export interface Profile {
   goal_days: number
   is_active: boolean
   unit_preference: "metric" | "imperial"
+  email?: string | null
   user_id?: string | null
   stripe_customer_id?: string | null
   subscription_status?: "free" | "trialing" | "active" | "past_due" | "canceled" | "unpaid" | null

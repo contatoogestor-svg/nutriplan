@@ -23,6 +23,7 @@ interface ActivityEntry {
 
 interface FormData {
   name: string
+  email: string
   date_of_birth: string
   gender: "male" | "female" | ""
   height_cm: string
@@ -37,6 +38,7 @@ interface FormData {
 
 const INITIAL_FORM: FormData = {
   name: "",
+  email: "",
   date_of_birth: "",
   gender: "",
   height_cm: "",
@@ -90,6 +92,9 @@ export default function OnboardingForm() {
     const newErrors: typeof errors = {}
 
     if (!form.name.trim()) newErrors.name = "Full name is required."
+    if (!form.email.trim()) newErrors.email = "Email address is required."
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      newErrors.email = "Please enter a valid email address."
     if (!form.date_of_birth) newErrors.date_of_birth = "Date of birth is required."
     else {
       const age = calculateAge(form.date_of_birth)
@@ -145,6 +150,7 @@ export default function OnboardingForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name.trim(),
+          email: form.email.trim(),
           date_of_birth: form.date_of_birth,
           gender: form.gender,
           height_cm,
@@ -196,6 +202,21 @@ export default function OnboardingForm() {
             className="input-field"
           />
           {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Email Address
+          </label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => set("email", e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            className="input-field"
+          />
+          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
         </div>
 
         <div>
