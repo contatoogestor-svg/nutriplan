@@ -22,10 +22,29 @@ export async function POST(req: NextRequest) {
 
     // Get the authenticated user from the session cookie (server-side, no race condition)
     let user_id: string | undefined
+    let inherited_subscription_status: string | null = null
+    let inherited_stripe_customer_id: string | null = null
     try {
       const supabaseAuth = await createSupabaseServerClient()
       const { data: { user } } = await supabaseAuth.auth.getUser()
       user_id = user?.id
+
+      // Inherit Pro status from existing profile so new plans keep the subscription
+      if (user_id) {
+        const supabaseService = createServerClient()
+        const { data: existingProfile } = await supabaseService
+          .from("profiles")
+          .select("subscription_status, stripe_customer_id")
+          .eq("user_id", user_id)
+          .not("subscription_status", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
+        if (existingProfile) {
+          inherited_subscription_status = existingProfile.subscription_status
+          inherited_stripe_customer_id = existingProfile.stripe_customer_id
+        }
+      }
     } catch { /* guest user — no user_id */ }
 
     // Validate required fields
@@ -68,6 +87,8 @@ export async function POST(req: NextRequest) {
         goal_days: Number(goal_days),
         unit_preference: unit_preference || "metric",
         ...(user_id ? { user_id } : {}),
+        ...(inherited_subscription_status ? { subscription_status: inherited_subscription_status } : {}),
+        ...(inherited_stripe_customer_id ? { stripe_customer_id: inherited_stripe_customer_id } : {}),
       })
       .select("id")
       .single()

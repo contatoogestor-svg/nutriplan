@@ -118,15 +118,15 @@ export default function PlanDashboard({ data, planId, upgradeSession, initialLog
         </div>
       )}
 
-      {/* Plan Selector — Pro only, shown when user has multiple plans */}
-      {isPro && userPlans.length > 0 && (
+      {/* Plan Selector — shown when user has multiple plans */}
+      {userPlans.length > 1 && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-green-600 dark:text-green-400" />
               My Plans ({userPlans.length}/3)
             </h2>
-            {userPlans.length < 3 && (
+            {isPro && userPlans.length < 3 && (
               <Link
                 href="/start?new=1"
                 className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium hover:text-green-700 dark:hover:text-green-300 transition-colors"
