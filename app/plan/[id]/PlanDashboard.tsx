@@ -13,6 +13,7 @@ import { formatWeight } from "@/lib/unitConversion"
 import type { Profile, MealPlan, Activity, WeightLog } from "@/lib/supabase"
 import { isProUser } from "@/lib/subscription"
 import { gtagEvent } from "@/lib/gtag"
+import { fbqEvent } from "@/lib/fbq"
 import Link from "next/link"
 
 interface UserPlanSummary {
@@ -78,6 +79,7 @@ export default function PlanDashboard({ data, planId, upgradeSession, initialLog
           clearInterval(interval)
           setUpgradeState("done")
           gtagEvent("hLlkCLurmbYcENOjnuBD", json.value)
+          fbqEvent("Purchase", { value: json.value, currency: "USD", content_name: "NutriPlan Pro" })
           router.refresh()
           return
         }

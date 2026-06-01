@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Lock, Zap, X } from "lucide-react"
+import { fbqEvent } from "@/lib/fbq"
 
 const PRO_FEATURES = [
   "Everything in Free",
@@ -27,6 +28,12 @@ export default function PaywallOverlay({ feature, planId, onClose, fullscreen }:
   const handleUpgrade = async () => {
     setLoading(true)
     setError("")
+    // Fire InitiateCheckout before redirecting to Stripe
+    fbqEvent("InitiateCheckout", {
+      value: selectedPlan === "annual" ? 4.92 : 9.99,
+      currency: "USD",
+      content_name: `NutriPlan Pro ${selectedPlan}`,
+    })
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
