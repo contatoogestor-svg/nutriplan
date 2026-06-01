@@ -129,13 +129,28 @@ export default function MealPlanTab({
           )}
         </div>
 
-        {/* Swap hint */}
-        {isPro && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-            <ArrowLeftRight className="w-3 h-3" />
-            Click a food row to swap it
-          </p>
-        )}
+        {/* Substitute Foods button */}
+        <div className="relative">
+          {isPro ? (
+            <button
+              type="button"
+              onClick={() => {}}
+              disabled
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm font-medium bg-green-50 dark:bg-green-900/10 cursor-default"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              Substitute Foods — <span className="font-semibold">expand a meal below</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSwapPaywall(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <span>🔒</span> Substitute Foods — <span className="text-green-600 dark:text-green-400 font-semibold">Pro</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Swap paywall overlay */}
@@ -206,7 +221,10 @@ export default function MealPlanTab({
                                 }`}
                               >
                                 <ArrowLeftRight className="w-3 h-3" />
-                                {!isPro && <span className="text-xs">Pro</span>}
+                                {!isPro
+                                  ? <span className="text-xs">Substitute — Pro Plan</span>
+                                  : <span className="text-xs">Substitute</span>
+                                }
                               </button>
                             </div>
                           </td>
