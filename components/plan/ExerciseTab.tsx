@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Lock, ChevronDown, ChevronUp, Clock, Flame, ExternalLink } from "lucide-react"
+import { Lock, ChevronDown, ChevronUp, Clock, Flame, ExternalLink, Printer } from "lucide-react"
 import SafetyAlert from "@/components/ui/SafetyAlert"
 import PaywallOverlay from "@/components/ui/PaywallOverlay"
 
@@ -471,6 +471,73 @@ const DAILY_PLANS: Record<number, DailyPlan> = {
   },
 }
 
+// ─── Print helper ─────────────────────────────────────────────────────────────
+
+function handlePrint(todaysPlan: DailyPlan | null, selectedTime: number | null) {
+  let html = `<!DOCTYPE html><html><head><title>Exercise Plan — NutriPlan</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:720px;margin:0 auto;padding:28px;color:#111;}
+    h1{color:#16a34a;font-size:22px;margin-bottom:4px;}
+    h2{font-size:15px;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin-top:24px;}
+    h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin:14px 0 6px;}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+    td,th{padding:6px 10px;border-bottom:1px solid #f3f4f6;text-align:left;}
+    th{background:#f9fafb;font-weight:600;font-size:11px;text-transform:uppercase;color:#6b7280;}
+    .card{margin-bottom:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;}
+    .badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-left:6px;}
+    .high{background:#fee2e2;color:#b91c1c;} .rec{background:#dcfce7;color:#15803d;} .adv{background:#ede9fe;color:#7c3aed;}
+    .meta{font-size:12px;color:#6b7280;margin-top:3px;}
+    .footer{margin-top:28px;font-size:11px;color:#9ca3af;text-align:center;border-top:1px solid #f3f4f6;padding-top:12px;}
+    @media print{@page{margin:1.5cm}}
+  </style></head><body>
+  <h1>NutriPlan — Exercise Plan</h1>
+  <p style="font-size:12px;color:#6b7280;">Generated on ${new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</p>`
+
+  if (todaysPlan && selectedTime) {
+    html += `<h2>Today's Workout — ${selectedTime} min · ${todaysPlan.label}</h2>
+    <p style="font-size:13px;color:#4b5563;">${todaysPlan.tip}</p>
+    <p style="font-size:13px;"><strong>Estimated burn:</strong> ${todaysPlan.totalCalories}</p>`
+    todaysPlan.items.forEach(item => {
+      html += `<h3>${item.icon} ${item.exerciseName} — ${item.minutes} min · ${item.caloriesBurn}</h3>`
+      if (item.workout) {
+        item.workout.forEach(block => {
+          html += `<div style="margin-bottom:14px;">
+            <strong style="font-size:12px;color:#374151;">${block.title}</strong>
+            <span style="font-size:11px;color:#9ca3af;margin-left:8px;">${block.duration}</span>
+            <table><thead><tr><th>Exercise</th><th>Sets / Duration</th><th>Rest</th></tr></thead><tbody>`
+          block.exercises.forEach(ex => {
+            const detail = ex.sets ? `${ex.sets}× ${ex.reps}` : (ex.duration ?? "")
+            html += `<tr>
+              <td>${ex.name}${ex.note ? `<br><span style="font-size:11px;color:#9ca3af;">${ex.note}</span>` : ""}</td>
+              <td>${detail}</td><td>${ex.rest ?? "—"}</td></tr>`
+          })
+          html += `</tbody></table></div>`
+        })
+      }
+    })
+  }
+
+  html += `<h2>Exercise Reference</h2>`
+  ALL_EXERCISES.forEach(ex => {
+    const badgeCls = ex.badge === "High Priority" ? "high" : ex.badge === "Advanced" ? "adv" : "rec"
+    html += `<div class="card">
+      <strong>${ex.icon} ${ex.name}</strong><span class="badge ${badgeCls}">${ex.badge}</span>
+      <p class="meta">📅 ${ex.frequency} &nbsp;·&nbsp; 🔥 ${ex.caloriesPerSession}</p>
+      <p class="meta">${ex.tip}</p></div>`
+  })
+
+  html += `<p class="footer">NutriPlan · For informational purposes only. Consult a fitness professional for a personalized program.</p>
+  </body></html>`
+
+  const w = window.open("", "_blank")
+  if (!w) return
+  w.document.write(html)
+  w.document.close()
+  setTimeout(() => w.print(), 400)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const TIME_SLOTS = [
   { label: "20 min", value: 20 },
   { label: "30 min", value: 30 },
@@ -592,11 +659,22 @@ export default function ExerciseTab({ activities, isPro, planId }: ExerciseTabPr
   // ── Time selector (shown for all users) ──────────────────────────────────────
   const timeSelector = (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <Clock className="w-4 h-4 text-green-600 dark:text-green-400" />
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          How much time do you have today?
-        </h3>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-green-600 dark:text-green-400" />
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            How much time do you have today?
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={() => handlePrint(todaysPlan, selectedTime)}
+          className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          title="Print exercise plan"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          Print
+        </button>
       </div>
       <div className="flex flex-wrap gap-2">
         {TIME_SLOTS.map((slot) => (

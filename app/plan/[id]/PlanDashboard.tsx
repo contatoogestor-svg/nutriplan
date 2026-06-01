@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { UtensilsCrossed, ShoppingCart, TrendingDown, Dumbbell, AlertTriangle, Info, RefreshCw, CheckCircle, Settings } from "lucide-react"
+import { UtensilsCrossed, ShoppingCart, TrendingDown, Dumbbell, AlertTriangle, Info, RefreshCw, CheckCircle, DollarSign, Plus, BookOpen } from "lucide-react"
 import MealPlanTab from "@/components/plan/MealPlanTab"
 import ShoppingListTab from "@/components/plan/ShoppingListTab"
 import TimelineTab from "@/components/plan/TimelineTab"
@@ -10,14 +10,24 @@ import ExerciseTab from "@/components/plan/ExerciseTab"
 import SafetyAlert from "@/components/ui/SafetyAlert"
 import AcronymTooltip from "@/components/ui/AcronymTooltip"
 import { formatWeight } from "@/lib/unitConversion"
-import type { Profile, MealPlan, Activity } from "@/lib/supabase"
+import type { Profile, MealPlan, Activity, WeightLog } from "@/lib/supabase"
 import { isProUser } from "@/lib/subscription"
 import { gtagEvent } from "@/lib/gtag"
+import Link from "next/link"
+
+interface UserPlanSummary {
+  id: string
+  created_at: string
+  target_calories: number
+  profile_name: string
+}
 
 interface PlanDashboardProps {
   data: { plan: MealPlan; profile: Profile; activities: Activity[] }
   planId: string
   upgradeSession?: string
+  initialLogs?: WeightLog[]
+  userPlans?: UserPlanSummary[]
 }
 
 const TABS = [
@@ -29,7 +39,7 @@ const TABS = [
 
 type TabId = typeof TABS[number]["id"]
 
-export default function PlanDashboard({ data, planId, upgradeSession }: PlanDashboardProps) {
+export default function PlanDashboard({ data, planId, upgradeSession, initialLogs = [], userPlans = [] }: PlanDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabId>("meals")
   const [upgradeState, setUpgradeState] = useState<"idle" | "polling" | "done">("idle")
   const router = useRouter()
@@ -108,6 +118,46 @@ export default function PlanDashboard({ data, planId, upgradeSession }: PlanDash
         </div>
       )}
 
+      {/* Plan Selector — Pro only, shown when user has multiple plans */}
+      {isPro && userPlans.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-green-600 dark:text-green-400" />
+              My Plans ({userPlans.length}/3)
+            </h2>
+            {userPlans.length < 3 && (
+              <Link
+                href="/start"
+                className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium hover:text-green-700 dark:hover:text-green-300 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Plan
+              </Link>
+            )}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {userPlans.map((up) => (
+              <Link
+                key={up.id}
+                href={`/plan/${up.id}`}
+                className={`shrink-0 flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border text-xs transition-all ${
+                  up.id === planId
+                    ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-sm"
+                    : "border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700"
+                }`}
+              >
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{up.profile_name}</span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  {new Date(up.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                </span>
+                <span className="text-green-600 dark:text-green-400 font-medium">{up.target_calories} kcal</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -125,7 +175,7 @@ export default function PlanDashboard({ data, planId, upgradeSession }: PlanDash
             onClick={handleManageSubscription}
             className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors flex-shrink-0 mt-1"
           >
-            <Settings className="w-3.5 h-3.5" />
+            <DollarSign className="w-3.5 h-3.5" />
             Manage Plan
           </button>
         )}
@@ -246,6 +296,7 @@ export default function PlanDashboard({ data, planId, upgradeSession }: PlanDash
               estimatedWeeklyLoss_kg={pj.estimatedWeeklyLoss_kg}
               isPro={isPro}
               planId={planId}
+              initialLogs={initialLogs}
             />
           )}
           {activeTab === "exercise" && (

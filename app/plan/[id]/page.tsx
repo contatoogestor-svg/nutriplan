@@ -4,12 +4,18 @@ import { Salad, Calendar } from "lucide-react"
 import PlanDashboard from "./PlanDashboard"
 import UserMenu from "@/components/ui/UserMenu"
 import { createSupabaseServerClient } from "@/lib/supabase-server"
+import { createServerClient } from "@/lib/supabase"
 
 async function getPlan(id: string) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const res = await fetch(`${baseUrl}/api/plans/${id}`, { cache: "no-store" })
-  if (!res.ok) return null
-  return res.json()
+  const [planRes, logsRes] = await Promise.all([
+    fetch(`${baseUrl}/api/plans/${id}`, { cache: "no-store" }),
+    fetch(`${baseUrl}/api/plans/${id}/checkin`, { cache: "no-store" }),
+  ])
+  if (!planRes.ok) return null
+  const planData = await planRes.json()
+  const logsData = logsRes.ok ? await logsRes.json() : { logs: [] }
+  return { ...planData, logs: logsData.logs ?? [] }
 }
 
 export default async function PlanPage({
@@ -27,10 +33,35 @@ export default async function PlanPage({
   if (!data) notFound()
 
   let userEmail: string | null = null
+  let userPlans: { id: string; created_at: string; target_calories: number; profile_name: string }[] = []
+
   try {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     userEmail = user?.email ?? null
+
+    if (user) {
+      const service = createServerClient()
+      const { data: profiles } = await service
+        .from("profiles")
+        .select("id, name")
+        .eq("user_id", user.id)
+
+      if (profiles?.length) {
+        const { data: plans } = await service
+          .from("meal_plans")
+          .select("id, created_at, target_calories, profile_id")
+          .in("profile_id", profiles.map((p) => p.id))
+          .order("created_at", { ascending: false })
+
+        userPlans = (plans ?? []).map((mp) => ({
+          id: mp.id,
+          created_at: mp.created_at,
+          target_calories: mp.target_calories,
+          profile_name: profiles.find((p) => p.id === mp.profile_id)?.name ?? "",
+        }))
+      }
+    }
   } catch { /* not authenticated */ }
 
   return (
@@ -56,7 +87,13 @@ export default async function PlanPage({
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <PlanDashboard data={data} planId={id} upgradeSession={upgradeSession} />
+        <PlanDashboard
+          data={data}
+          planId={id}
+          upgradeSession={upgradeSession}
+          initialLogs={data.logs}
+          userPlans={userPlans}
+        />
       </div>
     </main>
   )
