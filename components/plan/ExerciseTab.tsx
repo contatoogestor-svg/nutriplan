@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Lock } from "lucide-react"
+import { Lock, ChevronDown, ChevronUp, Clock, Flame } from "lucide-react"
 import SafetyAlert from "@/components/ui/SafetyAlert"
 import PaywallOverlay from "@/components/ui/PaywallOverlay"
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ActivityEntry {
   activity_type: string
@@ -26,6 +28,39 @@ interface ExerciseCard {
   caloriesPerSession: string
   tip: string
 }
+
+interface WorkoutExercise {
+  name: string
+  sets?: number
+  reps?: string
+  duration?: string
+  rest?: string
+  note?: string
+}
+
+interface WorkoutBlock {
+  title: string
+  duration: string
+  exercises: WorkoutExercise[]
+}
+
+interface PlanItem {
+  exerciseName: string
+  icon: string
+  minutes: number
+  caloriesBurn: string
+  highlight: boolean
+  workout?: WorkoutBlock[]
+}
+
+interface DailyPlan {
+  label: string
+  totalCalories: string
+  tip: string
+  items: PlanItem[]
+}
+
+// ─── Exercise card data ────────────────────────────────────────────────────────
 
 const ALL_EXERCISES: ExerciseCard[] = [
   {
@@ -102,6 +137,350 @@ const ALL_EXERCISES: ExerciseCard[] = [
   },
 ]
 
+// ─── Workout detail data ───────────────────────────────────────────────────────
+
+const STRENGTH_WORKOUTS: Record<string, WorkoutBlock[]> = {
+  "30": [
+    {
+      title: "Warm-up",
+      duration: "3 min",
+      exercises: [
+        { name: "Light jog in place", duration: "1 min" },
+        { name: "Arm circles + leg swings", duration: "1 min" },
+        { name: "Bodyweight squats", duration: "1 min" },
+      ],
+    },
+    {
+      title: "Full Body Circuit — 3 rounds",
+      duration: "22 min",
+      exercises: [
+        { name: "Squats", sets: 3, reps: "15 reps", rest: "60s" },
+        { name: "Push-ups", sets: 3, reps: "15 reps", rest: "60s" },
+        { name: "Dumbbell Row (each side)", sets: 3, reps: "12 reps", rest: "60s" },
+        { name: "Glute Bridge", sets: 3, reps: "15 reps", rest: "60s" },
+        { name: "Plank", sets: 3, reps: "30 seconds", rest: "45s" },
+      ],
+    },
+    {
+      title: "Cool-down",
+      duration: "5 min",
+      exercises: [
+        { name: "Quad stretch", duration: "45s each leg" },
+        { name: "Hip flexor stretch", duration: "45s each side" },
+        { name: "Child's pose", duration: "1 min" },
+      ],
+    },
+  ],
+  "45": [
+    {
+      title: "Warm-up",
+      duration: "5 min",
+      exercises: [
+        { name: "Light jog or jumping jacks", duration: "2 min" },
+        { name: "Dynamic stretching", duration: "3 min" },
+      ],
+    },
+    {
+      title: "Compound Strength — 4 exercises",
+      duration: "30 min",
+      exercises: [
+        { name: "Squats", sets: 4, reps: "12 reps", rest: "90s" },
+        { name: "Romanian Deadlift", sets: 3, reps: "10 reps", rest: "90s" },
+        { name: "Bench Press (or Push-ups)", sets: 4, reps: "10–12 reps", rest: "90s" },
+        { name: "Dumbbell Row", sets: 3, reps: "12 reps each side", rest: "90s" },
+        { name: "Overhead Press", sets: 3, reps: "10 reps", rest: "90s" },
+        { name: "Plank", sets: 3, reps: "45 seconds", rest: "60s" },
+      ],
+    },
+    {
+      title: "Cool-down",
+      duration: "10 min",
+      exercises: [
+        { name: "Full body stretching", duration: "5 min" },
+        { name: "Deep breathing", duration: "2 min" },
+        { name: "Foam rolling (if available)", duration: "3 min" },
+      ],
+    },
+  ],
+  "60": [
+    {
+      title: "Warm-up",
+      duration: "5 min",
+      exercises: [
+        { name: "Light cardio (bike or treadmill)", duration: "3 min" },
+        { name: "Mobility work", duration: "2 min" },
+      ],
+    },
+    {
+      title: "Push — Chest & Shoulders",
+      duration: "18 min",
+      exercises: [
+        { name: "Bench Press", sets: 4, reps: "10 reps", rest: "2 min" },
+        { name: "Incline Dumbbell Press", sets: 3, reps: "12 reps", rest: "90s" },
+        { name: "Lateral Raises", sets: 3, reps: "15 reps", rest: "60s" },
+        { name: "Tricep Dips", sets: 3, reps: "12 reps", rest: "60s" },
+      ],
+    },
+    {
+      title: "Pull & Legs",
+      duration: "22 min",
+      exercises: [
+        { name: "Squats", sets: 4, reps: "10 reps", rest: "2 min" },
+        { name: "Deadlift", sets: 3, reps: "8 reps", rest: "2 min", note: "Focus on form over weight" },
+        { name: "Pull-ups or Lat Pulldown", sets: 4, reps: "8–10 reps", rest: "90s" },
+        { name: "Bicep Curls", sets: 3, reps: "12 reps", rest: "60s" },
+      ],
+    },
+    {
+      title: "Core Finisher",
+      duration: "10 min",
+      exercises: [
+        { name: "Plank", sets: 3, reps: "60 seconds", rest: "45s" },
+        { name: "Russian Twists", sets: 3, reps: "20 reps", rest: "45s" },
+        { name: "Leg Raises", sets: 3, reps: "12 reps", rest: "45s" },
+      ],
+    },
+    {
+      title: "Cool-down",
+      duration: "5 min",
+      exercises: [
+        { name: "Full body stretching", duration: "5 min" },
+      ],
+    },
+  ],
+}
+
+const HIIT_WORKOUTS: Record<string, WorkoutBlock[]> = {
+  "20": [
+    {
+      title: "Warm-up",
+      duration: "3 min",
+      exercises: [
+        { name: "Jumping jacks", duration: "1 min" },
+        { name: "High knees (moderate)", duration: "1 min" },
+        { name: "Arm swings + hip circles", duration: "1 min" },
+      ],
+    },
+    {
+      title: "HIIT Circuit — 7 rounds (30s on / 20s off)",
+      duration: "12 min",
+      exercises: [
+        { name: "Burpees", duration: "30s on", rest: "20s off", note: "Full body, max effort" },
+        { name: "Jump Squats", duration: "30s on", rest: "20s off" },
+        { name: "Mountain Climbers", duration: "30s on", rest: "20s off" },
+        { name: "High Knees", duration: "30s on", rest: "20s off", note: "Pump arms for more intensity" },
+      ],
+    },
+    {
+      title: "Cool-down",
+      duration: "5 min",
+      exercises: [
+        { name: "Walk in place, slow breathing", duration: "2 min" },
+        { name: "Full body stretch", duration: "3 min" },
+      ],
+    },
+  ],
+  "30": [
+    {
+      title: "Warm-up",
+      duration: "5 min",
+      exercises: [
+        { name: "Light jog", duration: "2 min" },
+        { name: "Dynamic stretching", duration: "3 min" },
+      ],
+    },
+    {
+      title: "HIIT Circuit — 10 rounds (40s on / 20s off)",
+      duration: "20 min",
+      exercises: [
+        { name: "Burpees", duration: "40s on", rest: "20s off" },
+        { name: "Jump Squats", duration: "40s on", rest: "20s off" },
+        { name: "Push-ups", duration: "40s on", rest: "20s off" },
+        { name: "Mountain Climbers", duration: "40s on", rest: "20s off" },
+        { name: "High Knees", duration: "40s on", rest: "20s off" },
+      ],
+    },
+    {
+      title: "Cool-down",
+      duration: "5 min",
+      exercises: [
+        { name: "Walk in place", duration: "2 min" },
+        { name: "Quad + hip flexor stretch", duration: "3 min" },
+      ],
+    },
+  ],
+  "45": [
+    {
+      title: "Warm-up",
+      duration: "5 min",
+      exercises: [
+        { name: "Light jog", duration: "3 min" },
+        { name: "Dynamic mobility", duration: "2 min" },
+      ],
+    },
+    {
+      title: "Block 1 — Sprint Intervals",
+      duration: "10 min",
+      exercises: [
+        { name: "Sprint 30s / Walk 30s", duration: "30s on / 30s off", note: "Repeat 10 rounds" },
+      ],
+    },
+    {
+      title: "Block 2 — Strength Circuit (4 rounds)",
+      duration: "16 min",
+      exercises: [
+        { name: "Burpees", duration: "40s on", rest: "20s off" },
+        { name: "Squat Jumps", duration: "40s on", rest: "20s off" },
+        { name: "Push-ups", duration: "40s on", rest: "20s off" },
+        { name: "Plank Hold", duration: "40s on", rest: "20s off" },
+      ],
+    },
+    {
+      title: "Core Finisher",
+      duration: "9 min",
+      exercises: [
+        { name: "Mountain Climbers", sets: 3, reps: "30 seconds", rest: "30s" },
+        { name: "Russian Twists", sets: 3, reps: "20 reps", rest: "30s" },
+        { name: "V-ups", sets: 3, reps: "10 reps", rest: "30s" },
+      ],
+    },
+    {
+      title: "Cool-down",
+      duration: "5 min",
+      exercises: [
+        { name: "Walk + deep breathing", duration: "2 min" },
+        { name: "Full body stretch", duration: "3 min" },
+      ],
+    },
+  ],
+}
+
+// ─── Daily plan definitions ────────────────────────────────────────────────────
+
+const DAILY_PLANS: Record<number, DailyPlan> = {
+  20: {
+    label: "Quick Burn",
+    totalCalories: "200–350 kcal",
+    tip: "Short on time? HIIT is the most efficient option — burns as many calories as 40 min of jogging, plus EPOC keeps burning for hours.",
+    items: [
+      {
+        exerciseName: "HIIT",
+        icon: "⚡",
+        minutes: 20,
+        caloriesBurn: "200–350 kcal",
+        highlight: true,
+        workout: HIIT_WORKOUTS["20"],
+      },
+    ],
+  },
+  30: {
+    label: "Efficient Session",
+    totalCalories: "300–500 kcal",
+    tip: "30 minutes of HIIT triggers afterburn (EPOC) — your body keeps burning calories for up to 24h after the workout.",
+    items: [
+      {
+        exerciseName: "HIIT",
+        icon: "⚡",
+        minutes: 25,
+        caloriesBurn: "280–450 kcal",
+        highlight: true,
+        workout: HIIT_WORKOUTS["30"],
+      },
+      {
+        exerciseName: "Cool-down Walk",
+        icon: "🚶",
+        minutes: 5,
+        caloriesBurn: "25–40 kcal",
+        highlight: false,
+      },
+    ],
+  },
+  45: {
+    label: "Balanced Workout",
+    totalCalories: "350–550 kcal",
+    tip: "45 min is the sweet spot for strength training — enough time for full compound lifts that preserve muscle during your caloric deficit.",
+    items: [
+      {
+        exerciseName: "Strength Training",
+        icon: "🏋️",
+        minutes: 40,
+        caloriesBurn: "300–500 kcal",
+        highlight: true,
+        workout: STRENGTH_WORKOUTS["45"],
+      },
+      {
+        exerciseName: "Cool-down Walk",
+        icon: "🚶",
+        minutes: 5,
+        caloriesBurn: "25–40 kcal",
+        highlight: false,
+      },
+    ],
+  },
+  60: {
+    label: "Full Session",
+    totalCalories: "500–800 kcal",
+    tip: "An hour lets you combine strength work and cardio. Always do strength first — it uses glycogen efficiently before cardio taps into fat stores.",
+    items: [
+      {
+        exerciseName: "Strength Training",
+        icon: "🏋️",
+        minutes: 45,
+        caloriesBurn: "350–550 kcal",
+        highlight: true,
+        workout: STRENGTH_WORKOUTS["60"],
+      },
+      {
+        exerciseName: "Running / Cycling",
+        icon: "🏃",
+        minutes: 15,
+        caloriesBurn: "150–250 kcal",
+        highlight: false,
+      },
+    ],
+  },
+  90: {
+    label: "Athlete Session",
+    totalCalories: "700–1,100 kcal",
+    tip: "90 minutes allows a complete strength session followed by HIIT. Rest 5–10 min between blocks and rehydrate well.",
+    items: [
+      {
+        exerciseName: "Strength Training",
+        icon: "🏋️",
+        minutes: 50,
+        caloriesBurn: "400–600 kcal",
+        highlight: true,
+        workout: STRENGTH_WORKOUTS["60"],
+      },
+      {
+        exerciseName: "HIIT",
+        icon: "⚡",
+        minutes: 25,
+        caloriesBurn: "250–400 kcal",
+        highlight: true,
+        workout: HIIT_WORKOUTS["20"],
+      },
+      {
+        exerciseName: "Cool-down Walk",
+        icon: "🚶",
+        minutes: 15,
+        caloriesBurn: "75–120 kcal",
+        highlight: false,
+      },
+    ],
+  },
+}
+
+const TIME_SLOTS = [
+  { label: "20 min", value: 20 },
+  { label: "30 min", value: 30 },
+  { label: "45 min", value: 45 },
+  { label: "60 min", value: 60 },
+  { label: "90 min+", value: 90 },
+]
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
 function ExerciseCardUI({ ex }: { ex: ExerciseCard }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm space-y-2">
@@ -123,12 +502,63 @@ function ExerciseCardUI({ ex }: { ex: ExerciseCard }) {
   )
 }
 
+function WorkoutDetail({ blocks }: { blocks: WorkoutBlock[] }) {
+  return (
+    <div className="mt-4 space-y-4 border-t dark:border-gray-700 pt-4">
+      {blocks.map((block) => (
+        <div key={block.title}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              {block.title}
+            </p>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{block.duration}</span>
+          </div>
+          <div className="space-y-1.5">
+            {block.exercises.map((ex) => (
+              <div
+                key={ex.name}
+                className="flex items-start justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2"
+              >
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{ex.name}</p>
+                  {ex.note && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{ex.note}</p>
+                  )}
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  {ex.sets ? (
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      {ex.sets}× {ex.reps}
+                    </p>
+                  ) : ex.duration ? (
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{ex.duration}</p>
+                  ) : null}
+                  {ex.rest && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500">rest {ex.rest}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
 export default function ExerciseTab({ activities, isPro, planId }: ExerciseTabProps) {
+  const [selectedTime, setSelectedTime] = useState<number | null>(null)
+  const [expandedItem, setExpandedItem] = useState<string | null>(null)
   const [showPaywall, setShowPaywall] = useState(false)
+
   const hasActivities = activities && activities.length > 0
   const activeTypes = new Set(activities.map((a) => a.activity_type.toLowerCase()))
   const recommended = ALL_EXERCISES.filter((e) => !activeTypes.has(e.name.toLowerCase()))
   const exerciseList = hasActivities ? recommended : ALL_EXERCISES
+
+  const todaysPlan = selectedTime ? DAILY_PLANS[selectedTime] : null
 
   const muscleAlert = (
     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
@@ -148,13 +578,126 @@ export default function ExerciseTab({ activities, isPro, planId }: ExerciseTabPr
     </div>
   )
 
-  // ── FREE TIER: teaser view ─────────────────────────────────────────────────
+  // ── Time selector (shown for all users) ──────────────────────────────────────
+  const timeSelector = (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <Clock className="w-4 h-4 text-green-600 dark:text-green-400" />
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          How much time do you have today?
+        </h3>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {TIME_SLOTS.map((slot) => (
+          <button
+            key={slot.value}
+            type="button"
+            onClick={() => {
+              setSelectedTime(selectedTime === slot.value ? null : slot.value)
+              setExpandedItem(null)
+            }}
+            className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+              selectedTime === slot.value
+                ? "bg-green-600 text-white border-green-600 shadow-sm"
+                : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600"
+            }`}
+          >
+            {slot.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  // ── Today's plan panel ────────────────────────────────────────────────────────
+  const todaysPlanPanel = todaysPlan && (
+    <div className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-2xl p-5 border border-green-100 dark:border-green-800">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold text-gray-800 dark:text-gray-200">
+          Today&apos;s Workout Plan
+        </h3>
+        <span className="text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2.5 py-0.5 rounded-full font-medium">
+          {todaysPlan.label}
+        </span>
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{todaysPlan.tip}</p>
+
+      <div className="space-y-2">
+        {todaysPlan.items.map((item, idx) => (
+          <div key={item.exerciseName}>
+            <div
+              className={`rounded-xl border p-4 ${
+                item.highlight
+                  ? "bg-white dark:bg-gray-900 border-green-200 dark:border-green-800 shadow-sm"
+                  : "bg-white/60 dark:bg-gray-900/40 border-gray-100 dark:border-gray-800"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{item.icon}</span>
+                  <div>
+                    <p className={`font-medium text-sm ${item.highlight ? "text-gray-800 dark:text-gray-200" : "text-gray-600 dark:text-gray-400"}`}>
+                      {item.exerciseName}
+                    </p>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {item.minutes} min
+                      </span>
+                      <span className="text-xs text-orange-500 dark:text-orange-400 flex items-center gap-1">
+                        <Flame className="w-3 h-3" /> {item.caloriesBurn}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {item.workout && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedItem(expandedItem === item.exerciseName ? null : item.exerciseName)}
+                    className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium hover:text-green-700 dark:hover:text-green-300 transition-colors shrink-0"
+                  >
+                    {expandedItem === item.exerciseName ? (
+                      <><ChevronUp className="w-3 h-3" /> Hide</>
+                    ) : (
+                      <>See exercises <ChevronDown className="w-3 h-3" /></>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {item.workout && expandedItem === item.exerciseName && (
+                <WorkoutDetail blocks={item.workout} />
+              )}
+            </div>
+
+            {/* Connector */}
+            {idx < todaysPlan.items.length - 1 && (
+              <div className="flex justify-center my-1">
+                <div className="w-0.5 h-3 bg-green-200 dark:bg-green-800 rounded-full" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-green-200 dark:border-green-800/60 flex items-center justify-between">
+        <span className="text-xs text-gray-500 dark:text-gray-400">Estimated total burn</span>
+        <span className="text-sm font-bold text-orange-500 dark:text-orange-400 flex items-center gap-1">
+          <Flame className="w-3.5 h-3.5" /> {todaysPlan.totalCalories}
+        </span>
+      </div>
+    </div>
+  )
+
+  // ── FREE TIER ─────────────────────────────────────────────────────────────────
   if (!isPro) {
     const preview = exerciseList.slice(0, 2)
     const blurred = exerciseList.slice(2, 5)
 
     return (
       <div className="space-y-4">
+        {timeSelector}
+        {todaysPlanPanel}
+
         {!hasActivities && (
           <SafetyAlert
             type="info"
@@ -163,7 +706,6 @@ export default function ExerciseTab({ activities, isPro, planId }: ExerciseTabPr
         )}
         {muscleAlert}
 
-        {/* 2 cards visible */}
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
           {hasActivities ? "Recommended Additions" : "Exercise Recommendations"}
         </h3>
@@ -176,7 +718,6 @@ export default function ExerciseTab({ activities, isPro, planId }: ExerciseTabPr
           <div className="blur-sm pointer-events-none select-none grid gap-3 sm:grid-cols-2">
             {blurred.map((ex) => <ExerciseCardUI key={ex.name} ex={ex} />)}
           </div>
-
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/60 dark:via-gray-950/60 to-white dark:to-gray-950" />
           <div className="absolute bottom-0 inset-x-0 flex flex-col items-center gap-3 pb-8 pt-16">
             <div className="w-11 h-11 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
@@ -205,9 +746,12 @@ export default function ExerciseTab({ activities, isPro, planId }: ExerciseTabPr
     )
   }
 
-  // ── PRO TIER: full view ────────────────────────────────────────────────────
+  // ── PRO TIER ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {timeSelector}
+      {todaysPlanPanel}
+
       {!hasActivities && (
         <SafetyAlert
           type="info"
