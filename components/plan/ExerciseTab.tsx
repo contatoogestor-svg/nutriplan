@@ -526,10 +526,10 @@ function WorkoutDetail({ blocks }: { blocks: WorkoutBlock[] }) {
                       href={`https://www.youtube.com/results?search_query=how+to+${encodeURIComponent(ex.name)}+proper+form`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="See how to do this exercise"
-                      className="text-red-500 hover:text-red-600 transition-colors shrink-0"
+                      className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition-colors shrink-0"
                     >
                       <ExternalLink className="w-3 h-3" />
+                      Watch on YouTube
                     </a>
                   </div>
                   {ex.note && (
